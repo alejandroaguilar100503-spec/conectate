@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Panel Contable SRL</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--ink:#1c1d22;--sub:#6b7280;--line:#e5e7eb;--accent:#0d6efd;--good:#166534;--warn:#92400e;--bad:#991b1b}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12131a;--card:#1b1c25;--ink:#eef0f4;--sub:#9aa0ac;--line:#2b2d3a}}
+:root[data-theme="dark"]{--bg:#12131a;--card:#1b1c25;--ink:#eef0f4;--sub:#9aa0ac;--line:#2b2d3a}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;padding-bottom:env(safe-area-inset-bottom,0)}
+header{padding:16px 20px 12px calc(20px);padding-top:calc(16px + env(safe-area-inset-top,0));border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-size:18px;margin:0 0 4px}
+.sub{color:var(--sub);font-size:12.5px}
+nav{display:flex;gap:6px;padding:10px 20px;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--bg)}
+nav button{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;white-space:nowrap;font-family:inherit}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{padding:16px 20px 60px;max-width:1200px;margin:0 auto}
+.tab{display:none}.tab.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card .l{font-size:10.5px;color:var(--sub);text-transform:uppercase}
+.card .v{font-size:18px;font-weight:700;margin-top:4px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:nth-child(-n+4),td:nth-child(-n+4){text-align:left}
+th{background:rgba(127,127,127,.08);position:sticky;top:0;font-size:10.5px;text-transform:uppercase;color:var(--sub)}
+tr:last-child td{border-bottom:none}
+.pt th:nth-child(-n+9),.pt td:nth-child(-n+9){text-align:left}
+.pt input,.pt select{font-size:11.5px;padding:4px 5px}
+.pill{padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700}
+.p-EJECUCION{background:#dcfce7;color:#166534}.p-PAUSA{background:#fef3c7;color:#92400e}.p-PROPUESTA{background:#dbeafe;color:#1e40af}.p-CONCLUIDO{background:#e5e7eb;color:#374151}.p-AJUSTE{background:#fee2e2;color:#991b1b}
+.tag{font-size:9.5px;padding:1px 6px;border-radius:5px;margin-left:5px;font-weight:700}
+.tag-h{background:#e5e7eb;color:#374151}.tag-n{background:#dbeafe;color:#1e40af}
+h2{font-size:16px;margin:22px 0 10px}
+h3{font-size:13px;margin:16px 0 6px;color:var(--accent)}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px;align-items:end}
+label{font-size:10.5px;color:var(--sub);display:block;margin-bottom:3px}
+input,select{width:100%;padding:6px 7px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font-size:13px;font-family:inherit}
+button.btn{background:var(--accent);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;font-family:inherit}
+.del{background:transparent;border:1px solid var(--bad);color:var(--bad);border-radius:6px;padding:2px 8px;cursor:pointer;font-size:11px}
+.note{font-size:11.5px;color:var(--sub);margin-top:6px}
+.strategy{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px}
+.strategy b{color:var(--accent)}
+.strategy p{margin:4px 0 0;font-size:13px;line-height:1.5}
+.hl{background:rgba(13,110,253,.1);border:1px solid var(--accent);border-radius:10px;padding:14px;margin-bottom:14px}
+.chart-box{position:relative;height:320px;padding:14px}
+.chart-box.sm{height:300px;max-width:420px;margin:0 auto}
+footer{text-align:center;color:var(--sub);font-size:11px;padding:24px}
+</style>
+</head>
+<body>
+<header>
+<h1>📊 Panel Contable — Proyectos y Presupuestos SRL</h1>
+<div class="sub">Costeo automático por tipo de cliente · cascada fiscal · estrategia tributaria (Bolivia). Datos guardados solo en este navegador.</div>
+</header>
+<nav id="tabs"></nav>
+<main>
+<section id="dashboard" class="tab"></section>
+<section id="proyectos" class="tab"></section>
+<section id="analisis" class="tab"></section>
+<section id="graficas" class="tab"></section>
+<section id="equipo" class="tab"></section>
+<section id="panorama" class="tab"></section>
+<section id="matriz" class="tab"></section>
+<section id="fiscal" class="tab"></section>
+</main>
+<footer>Herramienta de apoyo interno — no sustituye la asesoría de un contador o abogado tributarista matriculado.</footer>
+<script>
+const TIPOS=["A","A-1","B","B-1","C","D"];
+const ESTADOS=["EJECUCION","PAUSA","PROPUESTA","AJUSTE PLANO","CONCLUIDO"];
+const fmt=n=>"Bs "+((+n||0).toLocaleString("es-BO",{minimumFractionDigits:2,maximumFractionDigits:2}));
+const pct=n=>((+n||0)*100).toFixed(2)+"%";
+
+let MATRIZ={
+ "A":{cs:.30,iva:.1494,herr:.03,gga:.10,util:.14,cont:.15,reinv:.25,ejec:.60,it:.0309},
+ "A-1":{cs:.30,iva:0,herr:.03,gga:.10,util:.14,cont:.15,reinv:.25,ejec:.60,it:0},
+ "B":{cs:.60,iva:.1494,herr:.05,gga:.10,util:.10,cont:.20,reinv:.20,ejec:.60,it:.0309},
+ "B-1":{cs:.58,iva:.1494,herr:.05,gga:.12,util:.12,cont:.15,reinv:.25,ejec:.60,it:.0309},
+ "C":{cs:.50,iva:.1494,herr:.05,gga:.10,util:.10,cont:.15,reinv:.25,ejec:.60,it:.0309},
+ "D":{cs:.15,iva:0,herr:.03,gga:.04,util:.09,cont:.15,reinv:.25,ejec:.60,it:0}
+};
+const SPLIT={gestion:.25,gestOf:.30,oficina:.45}; // reparto fijo de GGA, igual en todos los tipos
+let DIST={iue:.25,reservaLegal:.05,garantias:.10,capex:.10,bono:.05,desarrollo:.05,retencion:.15,retiro:.50};
+
+// [codigo,nombre,cliente,encargado,subcontratista,estado,tipo,mo,mat,eq,cs,iva,herr,gga,gestion,gestOf,oficina,util,cont,it,ptot,cobrado]
+const HIST=[[2949,"VIVIENDA 14 B","MARCELO VILLARROEL","Jose","","PAUSA","A",9904.1,25089.43,0,5942.46,0,0,5386.31,637.53,765.03,3983.75,7540.83,1131.12,0,53863.13,0],
+[2951,"CASA BARRIO PROFESIONAL","MARCELO VILLARROEL","Jose","ALEJANDRO","EJECUCION","A",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2952,"VIVIENDA EDIFICIO ROCHA","MIRIAM ROCHA","","","PROPUESTA","A",8813.14,22140.32,0,1719.63,0,0,3439.27,793.08,951.69,1694.5,6878.55,1031.78,0,42990.91,0],
+[2953,"CENTRO INFANTIL ARCA DE NOE","ARQ CECILIA MARTINES","Mauricio","DANY","EJECUCION","A",18000,68472.6,160.17,3697.2,5424.3,817.31,14700.13,1259.45,1511.34,11929.34,20580,3087,15148.4,147000.11,0],
+[2954,"EX CINE MEX","CRISTO VIENE","Mauricio","DANY","EJECUCION","A",35204.31,0,0,21474.63,11215.63,2046,19679.6,949.66,1139.6,17590.34,72814.59,10922.19,34360.64,196795.85,0],
+[2955,"PRESUPUESTO CASA","DR ARIEL CASA","Jose","DANY","AJUSTE PLANO","A",19245.52,0,0,5773.66,3525.2,860.18,2940.46,673.84,808.6,1458.02,3234.5,485.18,1099.41,36678.93,0],
+[2956,"SISTEMA ELECTRICO EDF.","AVANSALUD","Ruddy","DANY","EJECUCION","A",44684.5,0,0,13405.35,8678.62,0,13000,3009.91,3611.9,6378.19,50232,7534.8,0,130000.47,0],
+[2957,"CALATHEA BLOQUE NORTE","ALEX ARNEZ","Jose","DANY","EJECUCION","A",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2958,"CALATHEA BLOQUE SUD","ALEX ARNEZ","Jose","DANY","EJECUCION","A",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2959,"PROYECTO ELECTRICO","PROYECTO CORANI","Ruddy","DANY","EJECUCION","A",30290,49630.86,0,19158.43,7387.59,0,13567.07,2087.44,2504.92,8974.71,14924.42,2238.66,719.33,135677.7,0],
+[2960,"INSTALACIONES ELECTRICAS","FORD LA PAZ","Ruddy","DANY","EJECUCION","A",23495,63450,0,7046.15,4562.85,0,13500,1902.92,2283.5,9313.59,18900,2835,4046.48,135000.48,0],
+[2961,"CASA APOTE","ARQ GABRIEL LEMA","Jose","DANY","EJECUCION","A",10247.7,0,0,102.48,0,0,2112.28,84.63,101.56,1926.09,8660.35,1299.05,0,21122.81,0],
+[2962,"AJUSTE DE PLANOS","AVANDSALUD","","DANY","CONCLUIDO","A",4546,0,0,1363.8,882.92,0,1800,0,0,1800,1857.5,278.63,0,10450.22,0],
+[2963,"INSTALACIONES SANTA CRUZ","BOTANICA DE LUCES","Mauricio","EDY","EJECUCION","A",49870,0,0,29922,0,0,10099,1740.05,2088.05,6270.9,11108.9,1666.34,0,100999.9,0],
+[2950,"INSTALACIONES ELECTRICAS","ALALAY GENERAL LUX","","","EJECUCION","A",26636.42,67247.95,0,10896.96,5607.49,1288.62,11167.74,0,0,11167.74,17198.32,2579.75,4327.34,144370.84,0],
+[2965,"INSTALACION ELECTRICA","CASA GIO ALBARRACIN","Ruddy","DANY","EJECUCION","A",19220,0,0,4560,0,0,4100,975,1170,1955,13120,1968,0,41000,0],
+[2966,"REMODELACION ELECTRICA","CASA ARQ. DENNIS LEMA","","ALEJANDRO","EJECUCION","A",2430,6527.86,0,791.62,481.31,0,1401.43,79.13,94.96,1227.35,1962,294.3,420.06,14014.28,0],
+[2967,"REMODELACION ELECTRICA","CASA ANDRES IRIARTE","","DANY","EJECUCION","A",0,0,0,0,0,0,0,0,0,0,0,0,0,4317.5,0],
+[2968,"CARGADOR AUTO ELECTRICO","JULIO CORTES","Jose","","EJECUCION","A-1",324.45,974.25,6.32,97.34,0,12.65,141.5,35.38,42.45,63.68,217.91,32.69,0,1774.42,0],
+[2600,"GALPON SACABA","EMBOL SA","Jose","","EJECUCION","C",65099.52,197249.97,39828.52,32550.41,14588.9,5611.94,35492.93,8873.23,10647.88,15971.82,39042.22,5856.33,13266.16,442730.56,0],
+[2602,"CLINICA ESTETICA","JALASOFT","Ruddy","","PROPUESTA","-",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2610,"TERRAZA","JALASOFT","Ruddy","","PROPUESTA","-",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[0,"ALIMENTACION LABORATORIOS","FUNDACION PATIÑO","Ruddy","","PROPUESTA","-",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2604,"LICITACION","BANCO GANADERO","Jose","","PROPUESTA","-",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+[2611,"CASA ARQUITECTO","CAMILO GAMBOA","Ruddy","","EJECUCION","A-1",1489.3,1926.19,160.17,148.93,0,49.15,354.73,88.68,106.42,159.63,371.56,55.73,0,4500.03,0]];
+
+const DATA_VER=4;
+const uid=()=>"n"+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function histManual(h){return {cs:h[10],iva:h[11],herr:h[12],gga:h[13],gestion:h[14],gestOf:h[15],oficina:h[16],util:h[17],cont:h[18],it:h[19],total:h[20]};}
+function defaultProyectos(){
+ return HIST.map((r,i)=>({id:"h"+i+"_"+Math.random().toString(36).slice(2,6),hi:i,codigo:r[0],nombre:r[1],cliente:r[2],encargado:r[3],subcontratista:r[4],estado:r[5],tipo:r[6],legado:true,avance:"",
+  mo:r[7],mat:r[8],eq:r[9],cobrado:r[21],real:{moR:0,matR:0,herrR:0,eqR:0},manual:histManual(r)}));
+}
+function findHist(p){
+ if(p.hi!==undefined&&HIST[p.hi])return HIST[p.hi];
+ const i=HIST.findIndex(r=>r[0]===p.codigo&&(p.codigo!==0||r[1]===p.nombre));
+ if(i>=0){p.hi=i;return HIST[i];}
+ return null;
+}
+// Une variantes de un mismo nombre (jose / Jose / JOSE) y limpia espacios
+function normEnc(s){
+ s=(s||"").trim().replace(/\s+/g," ");
+ if(!s||s==="-")return "";
+ const ex=proyectos.map(p=>p.encargado).find(e=>e&&e.toLowerCase()===s.toLowerCase());
+ return ex||(s.charAt(0).toUpperCase()+s.slice(1));
+}
+let proyectos=[], activeTab="dashboard";
+let REALEMP={gestion:0,gestOf:0,oficina:0,it:0};
+function loadState(){
+ let stale=false;
+ try{
+  const s=localStorage.getItem("panelContableSRL_v1");
+  if(s){const d=JSON.parse(s);proyectos=d.proyectos||defaultProyectos();MATRIZ=d.matriz||MATRIZ;DIST=d.dist||DIST;REALEMP=d.realemp||REALEMP;stale=d.ver!==DATA_VER;}
+  else proyectos=defaultProyectos();
+ }catch(e){proyectos=defaultProyectos();}
+ proyectos.forEach(p=>{
+  if(!p.real)p.real={moR:0,matR:0,herrR:0,eqR:0};
+  if(!p.codigo)p.codigo=0;
+  if(p.subcontratista===undefined)p.subcontratista="";
+  if(p.avance===undefined)p.avance="";
+  if(!p.id)p.id=uid();
+  if(p.legado){
+   const h=findHist(p);
+   // si la base se corrigió (versión nueva) los históricos se refrescan; se conservan estado, cobrado, encargado, avance y costos reales
+   if(h&&(stale||!p.manual||p.manual.gestion===undefined)){
+    p.manual=histManual(h);p.mo=h[7];p.mat=h[8];p.eq=h[9];p.tipo=h[6];p.nombre=h[1];p.cliente=h[2];
+    if(!p.subcontratista)p.subcontratista=h[4];
+    if(stale&&p.cobrado===h[20]&&h[20]!==h[21])p.cobrado=h[21]; // corrige versión anterior que copiaba el total en Cobrado
+   }
+  }
+ });
+ const canon={};
+ proyectos.forEach(p=>{let e=(p.encargado||"").trim().replace(/\s+/g," ");if(e==="-")e="";
+  if(e){const k=e.toLowerCase();if(!canon[k])canon[k]=e.charAt(0).toUpperCase()+e.slice(1);e=canon[k];}
+  p.encargado=e;});
+ if(stale)saveState();
+}
+function saveState(){
+ try{localStorage.setItem("panelContableSRL_v1",JSON.stringify({ver:DATA_VER,proyectos,matriz:MATRIZ,dist:DIST,realemp:REALEMP}));}catch(e){console.error("storage",e);}
+}
+
+function calcNuevo(tipo,mo,mat,eq){
+ const m=MATRIZ[tipo]||MATRIZ["A"];
+ const cs=mo*m.cs;
+ const iva=(mo+cs)*m.iva;
+ const totalMO=mo+cs+iva;
+ const herr=totalMO*m.herr;
+ const baseGGA=mat+totalMO+eq+herr;
+ const gga=baseGGA*m.gga;
+ const gestion=gga*SPLIT.gestion, gestOf=gga*SPLIT.gestOf, oficina=gga*SPLIT.oficina;
+ const baseUtil=baseGGA+gga;
+ const util=baseUtil*m.util;
+ const cont=util*m.cont, reinv=util*m.reinv, ejec=util*m.ejec;
+ const baseIT=baseUtil+util;
+ const it=baseIT*m.it;
+ const total=baseUtil+util+it;
+ return {cs,iva,herr,gga,gestion,gestOf,oficina,util,cont,reinv,ejec,it,total};
+}
+function calcOf(p){
+ if(p.legado){
+  const m=p.manual;
+  return {cs:m.cs,iva:m.iva,herr:m.herr,gga:m.gga,gestion:m.gestion,gestOf:m.gestOf,oficina:m.oficina,
+   util:m.util,cont:m.cont,reinv:0,ejec:m.util-m.cont,it:m.it,total:m.total};
+ }
+ return calcNuevo(p.tipo,p.mo,p.mat,p.eq);
+}
+
+function activos(list){return list.filter(p=>p.estado!=="PROPUESTA");}
+
+function renderTabs(){
+ const t=[["dashboard","Resumen"],["proyectos","Proyectos"],["analisis","Análisis Financiero"],["graficas","Análisis Visual"],["equipo","Por Encargado"],["panorama","Panorama General"],["matriz","Matriz de tasas"],["fiscal","Estrategia fiscal"]];
+ document.getElementById("tabs").innerHTML=t.map(([k,l])=>`<button data-t="${k}" class="${activeTab===k?'active':''}">${l}</button>`).join("");
+ document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{activeTab=b.dataset.t;render();});
+}
+
+function renderDashboard(){
+ const inc=document.getElementById("incProp")?document.getElementById("incProp").checked:false;
+ const list=inc?proyectos:activos(proyectos);
+ let mo=0,mat=0,eq=0,cs=0,gga=0,util=0,cont=0,it=0,total=0,cobrado=0,obra=0;
+ list.forEach(p=>{const c=calcOf(p);obra+=realCalc(p,c).costoObraPresup;mo+=p.mo;mat+=p.mat;eq+=p.eq;cs+=c.cs;gga+=c.gga;util+=c.util;cont+=c.cont;it+=c.it;total+=c.total;cobrado+=p.cobrado;});
+ const saldo=total-cobrado;
+ const utilImp=util-cont, iue=utilImp*DIST.iue, utilNeta=utilImp-iue;
+ const ahorroComp=Math.min(it,iue);
+ const dist={reservaLegal:utilNeta*DIST.reservaLegal,garantias:utilNeta*DIST.garantias,capex:utilNeta*DIST.capex,bono:utilNeta*DIST.bono,desarrollo:utilNeta*DIST.desarrollo,retencion:utilNeta*DIST.retencion,retiro:utilNeta*DIST.retiro};
+ document.getElementById("dashboard").innerHTML=`
+ <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--sub);margin-bottom:10px"><input type="checkbox" id="incProp" style="width:auto" ${inc?"checked":""}> Incluir proyectos en estado PROPUESTA</label>
+ <div class="cards">
+  <div class="card"><div class="l">Proyectos activos</div><div class="v">${list.length}</div></div>
+  <div class="card"><div class="l">Costo total de obra</div><div class="v">${fmt(obra)}</div></div>
+  <div class="card"><div class="l">Gastos generales</div><div class="v">${fmt(gga)}</div></div>
+  <div class="card"><div class="l">Utilidad bruta</div><div class="v">${fmt(util)}</div></div>
+  <div class="card"><div class="l">Precio total facturado</div><div class="v">${fmt(total)}</div></div>
+  <div class="card"><div class="l">Cobrado</div><div class="v">${fmt(cobrado)}</div></div>
+  <div class="card"><div class="l">Saldo por cobrar</div><div class="v">${fmt(saldo)}</div></div>
+  <div class="card"><div class="l">Impuesto IT acumulado</div><div class="v">${fmt(it)}</div></div>
+ </div>
+ <h2>Cascada fiscal consolidada</h2>
+ <div class="tw"><table><tbody>
+ <tr><td>Utilidad Bruta Proyectada</td><td>${fmt(util)}</td></tr>
+ <tr><td>(-) Fondo de Contingencia de Obra</td><td>${fmt(cont)}</td></tr>
+ <tr><td><b>Utilidad Imponible IUE</b></td><td><b>${fmt(utilImp)}</b></td></tr>
+ <tr><td>(-) IUE (${pct(DIST.iue)})</td><td>${fmt(iue)}</td></tr>
+ <tr><td><b>Utilidad Neta Líquida Real</b></td><td><b>${fmt(utilNeta)}</b></td></tr>
+ </tbody></table></div>
+ <h3>Distribución estratégica de la utilidad neta</h3>
+ <div class="tw"><table><tbody>
+ <tr><td>1. Reserva Legal SRL (${pct(DIST.reservaLegal)})</td><td>${fmt(dist.reservaLegal)}</td></tr>
+ <tr><td>2. Fondo respaldo garantías y caja (${pct(DIST.garantias)})</td><td>${fmt(dist.garantias)}</td></tr>
+ <tr><td>3. Fondo CAPEX equipos y herramientas (${pct(DIST.capex)})</td><td>${fmt(dist.capex)}</td></tr>
+ <tr><td>4. Bono por desempeño (${pct(DIST.bono)})</td><td>${fmt(dist.bono)}</td></tr>
+ <tr><td>5. Desarrollo, licencias y software (${pct(DIST.desarrollo)})</td><td>${fmt(dist.desarrollo)}</td></tr>
+ <tr><td>6. Retención capital de trabajo (${pct(DIST.retencion)})</td><td>${fmt(dist.retencion)}</td></tr>
+ <tr><td>7. Retiro neto libre del socio (${pct(DIST.retiro)})</td><td>${fmt(dist.retiro)}</td></tr>
+ </tbody></table></div>
+ <div class="hl"><b>💡 Compensación IT vs IUE:</b> pagaste aprox. <b>${fmt(it)}</b> de IT en estos proyectos. Ese monto es acreditable contra el IUE del mismo ejercicio (Ley 843 Art. 77), por lo que tu IUE a pagar en caja podría bajar de ${fmt(iue)} a aprox. <b>${fmt(Math.max(iue-it,0))}</b> si se aplica correctamente la compensación.</div>
+ `;
+ const cb=document.getElementById("incProp"); if(cb) cb.onchange=render;
+}
+
+const f2=n=>(+n||0).toLocaleString("es-BO",{minimumFractionDigits:2,maximumFractionDigits:2});
+function chequeo(p,c){
+ const suma=p.mo+p.mat+p.eq+c.cs+c.iva+c.herr+c.gga+c.util+c.it;
+ const dif=c.total-suma, ggaDif=c.gestion+c.gestOf+c.oficina-c.gga;
+ return {suma,dif,ggaDif,ok:Math.abs(dif)<0.05&&Math.abs(ggaDif)<0.05};
+}
+function sumaLista(list){
+ const t={mo:0,mat:0,eq:0,cs:0,iva:0,herr:0,gga:0,gestion:0,gestOf:0,oficina:0,util:0,cont:0,it:0,total:0,cobrado:0};
+ list.forEach(p=>{const c=calcOf(p);t.mo+=p.mo;t.mat+=p.mat;t.eq+=p.eq;["cs","iva","herr","gga","gestion","gestOf","oficina","util","cont","it","total"].forEach(k=>t[k]+=c[k]);t.cobrado+=p.cobrado;});
+ return t;
+}
+function renderProyectos(){
+ const rows=proyectos.map(p=>{const c=calcOf(p);return {p,c,k:chequeo(p,c)};});
+ const encs=[...new Set(["Jose","Ruddy","Mauricio",...proyectos.map(p=>p.encargado).filter(Boolean)])];
+ const malos=rows.filter(x=>!x.k.ok);
+ const totRow=(n,t)=>`<tr style="font-weight:700;background:rgba(127,127,127,.1)"><td colspan="9">${n}</td>${[t.mo,t.mat,t.eq,t.cs,t.iva,t.herr,t.gga,t.gestion,t.gestOf,t.oficina,t.util,t.cont,t.it,t.total,t.cobrado,t.total-t.cobrado].map(v=>`<td>${f2(v)}</td>`).join("")}<td></td><td></td></tr>`;
+ const tipoSel=(p)=>`<select data-f="tipo" data-id="${p.id}" style="width:62px">${(TIPOS.includes(p.tipo)?TIPOS:["-",...TIPOS]).map(t=>`<option ${t===p.tipo?"selected":""}>${t}</option>`).join("")}</select>`;
+ const num=(p,f)=>`<input data-f="${f}" data-id="${p.id}" type="number" step="0.01" style="width:92px;text-align:right" value="${p[f]}">`;
+ document.getElementById("proyectos").innerHTML=`
+ <h2>Nuevo proyecto (cálculo automático por Tipo de Cliente)</h2>
+ <datalist id="dlEnc">${encs.map(e=>`<option value="${e}">`).join("")}</datalist>
+ <div class="form-grid">
+  <div><label>Código</label><input id="f_codigo" type="number"></div>
+  <div><label>Nombre</label><input id="f_nombre"></div>
+  <div><label>Cliente</label><input id="f_cliente"></div>
+  <div><label>Encargado (elige o escribe uno nuevo)</label><input id="f_encargado" list="dlEnc"></div>
+  <div><label>Subcontratista</label><input id="f_subcontratista"></div>
+  <div><label>Estado</label><select id="f_estado">${ESTADOS.map(e=>`<option>${e}</option>`).join("")}</select></div>
+  <div><label>Tipo cliente</label><select id="f_tipo">${TIPOS.map(t=>`<option>${t}</option>`).join("")}</select></div>
+  <div><label>Base Mano de Obra</label><input id="f_mo" type="number" value="0"></div>
+  <div><label>Materiales</label><input id="f_mat" type="number" value="0"></div>
+  <div><label>Equipos</label><input id="f_eq" type="number" value="0"></div>
+  <div><label>Cobrado (avances)</label><input id="f_cobrado" type="number" value="0"></div>
+  <div><button class="btn" id="addBtn">+ Agregar</button></div>
+ </div>
+ ${malos.length?`<div class="hl" style="border-color:var(--bad);background:rgba(185,28,28,.08)"><b>⚠ Control de cuadre:</b> ${malos.length} proyecto(s) donde los componentes no suman el Presupuesto Total de tu base: ${malos.map(x=>`${x.p.codigo||"s/c"} ${x.p.nombre} (dif. ${f2(x.k.dif)})`).join("; ")}. Se respetó el Total de tu Excel; revisa esos casos en el origen.</div>`:`<div class="hl"><b>✓ Control de cuadre:</b> todos los proyectos cuadran (componentes = Presupuesto Total).</div>`}
+ <h2>Todos los proyectos</h2>
+ <div class="note">Todo es editable: Estado, Encargado (escribe uno nuevo y aparece solo en todas las pestañas), Subcontratista, Avance, Cobrado, Nombre, Cliente. Si cambias Base MO / Materiales / Equipos / Tipo de un proyecto HISTÓRICO se recalcula con la matriz (te pedirá confirmación). Los proyectos en PROPUESTA no suman en los totales.</div>
+ <div class="tw"><table class="pt"><thead><tr>
+ <th>Nº</th><th>Cód.</th><th>Proyecto</th><th>Cliente</th><th>Encargado</th><th>Subcontrat.</th><th>Estado</th><th>Tipo</th><th>Avance %</th>
+ <th>Base MO</th><th>Materiales</th><th>Equipos</th><th>Cargas Soc.</th><th>IVA MO</th><th>Herram.</th><th>Gastos Grales.</th><th>Gest.</th><th>Gest. Of.</th><th>Oficina</th><th>Utilidad</th><th>Conting.</th><th>Imp. IT</th><th>Presup. Total</th><th>Cobrado</th><th>Saldo</th><th>Control</th><th></th>
+ </tr></thead><tbody>
+ ${rows.map(({p,c,k},i)=>`<tr>
+  <td>${i+1}</td><td>${p.codigo||"—"}</td>
+  <td><input data-f="nombre" data-id="${p.id}" style="width:170px" value="${(p.nombre||"").replace(/"/g,"&quot;")}">${p.legado?'<span class="tag tag-h">HIST</span>':'<span class="tag tag-n">NUEVO</span>'}</td>
+  <td><input data-f="cliente" data-id="${p.id}" style="width:140px" value="${(p.cliente||"").replace(/"/g,"&quot;")}"></td>
+  <td><input data-enc="${p.id}" list="dlEnc" style="width:90px" value="${p.encargado||""}" placeholder="Sin asignar"></td>
+  <td><input data-f="subcontratista" data-id="${p.id}" style="width:90px" value="${p.subcontratista||""}"></td>
+  <td><select data-est="${p.id}">${ESTADOS.map(e=>`<option ${e===p.estado?"selected":""}>${e}</option>`).join("")}</select></td>
+  <td>${tipoSel(p)}</td>
+  <td><input data-f="avance" data-id="${p.id}" type="number" min="0" max="100" style="width:55px" value="${p.avance}"></td>
+  <td>${num(p,"mo")}</td><td>${num(p,"mat")}</td><td>${num(p,"eq")}</td>
+  <td>${f2(c.cs)}</td><td>${f2(c.iva)}</td><td>${f2(c.herr)}</td><td>${f2(c.gga)}</td><td>${f2(c.gestion)}</td><td>${f2(c.gestOf)}</td><td>${f2(c.oficina)}</td>
+  <td>${f2(c.util)}</td><td>${f2(c.cont)}</td><td>${f2(c.it)}</td>
+  <td><b>${f2(c.total)}</b></td><td><input data-cob="${p.id}" type="number" step="0.01" style="width:90px;text-align:right" value="${p.cobrado}"></td><td>${f2(c.total-p.cobrado)}</td>
+  <td>${k.ok?'<span style="color:var(--good)">✓</span>':`<span style="color:var(--bad)" title="Componentes suman ${f2(k.suma)} vs Total ${f2(c.total)}">⚠ ${f2(k.dif)}</span>`}</td>
+  <td><button class="del" data-id="${p.id}">✕</button></td>
+ </tr>`).join("")}
+ ${totRow("TOTAL ACTIVOS (sin PROPUESTA)",sumaLista(proyectos.filter(p=>p.estado!=="PROPUESTA")))}
+ ${totRow("TOTAL GENERAL (incluye propuestas)",sumaLista(proyectos))}
+ </tbody></table></div>`;
+ document.getElementById("addBtn").onclick=()=>{
+  const g=id=>document.getElementById(id).value;
+  proyectos.push({id:uid(),codigo:+g("f_codigo")||0,nombre:g("f_nombre").trim()||"Sin nombre",cliente:g("f_cliente").trim(),
+   encargado:normEnc(g("f_encargado")),subcontratista:g("f_subcontratista").trim(),estado:g("f_estado"),tipo:g("f_tipo"),legado:false,avance:"",
+   mo:+g("f_mo")||0,mat:+g("f_mat")||0,eq:+g("f_eq")||0,cobrado:+g("f_cobrado")||0,real:{moR:0,matR:0,herrR:0,eqR:0},manual:null});
+  saveState();render();
+ };
+ const P=id=>proyectos.find(p=>p.id===id);
+ document.querySelectorAll(".del").forEach(b=>b.onclick=()=>{if(confirm("¿Eliminar este proyecto?")){proyectos=proyectos.filter(p=>p.id!==b.dataset.id);saveState();render();}});
+ document.querySelectorAll("[data-est]").forEach(x=>x.onchange=()=>{P(x.dataset.est).estado=x.value;saveState();render();});
+ document.querySelectorAll("[data-cob]").forEach(x=>x.onchange=()=>{P(x.dataset.cob).cobrado=+x.value||0;saveState();render();});
+ document.querySelectorAll("[data-enc]").forEach(x=>x.onchange=()=>{P(x.dataset.enc).encargado=normEnc(x.value);saveState();render();});
+ document.querySelectorAll("[data-f]").forEach(x=>x.onchange=()=>{
+  const p=P(x.dataset.id),f=x.dataset.f;
+  if(f==="avance"){p.avance=x.value===""?"":Math.max(0,Math.min(100,+x.value||0));}
+  else if(["mo","mat","eq","tipo"].includes(f)){
+   if(p.legado){
+    if(!confirm("Este proyecto es HISTÓRICO (valores congelados de tu base). Si cambias este dato se recalculará todo con la matriz del Tipo de Cliente. ¿Continuar?")){render();return;}
+    p.legado=false;p.manual=null;
+   }
+   if(f==="tipo")p.tipo=x.value;else p[f]=+x.value||0;
+   if(!TIPOS.includes(p.tipo))p.tipo="A";
+  } else p[f]=x.value.trim();
+  saveState();render();
+ });
+}
+
+function realCalc(p,c){
+ const r=p.real||{moR:0,matR:0,herrR:0,eqR:0};
+ const tieneReal=(r.moR+r.matR+r.herrR+r.eqR)>0;
+ const moTot=p.mo+c.cs+c.iva, hePresup=p.eq+c.herr, heReal=r.herrR+r.eqR;
+ const cat={mo:{presup:moTot,real:r.moR,saldo:moTot-r.moR},mat:{presup:p.mat,real:r.matR,saldo:p.mat-r.matR},herr:{presup:hePresup,real:heReal,saldo:hePresup-heReal}};
+ const dirPresup=moTot+p.mat+hePresup, dirReal=r.moR+r.matR+heReal;
+ const ggaRate=dirPresup>0?c.gga/dirPresup:0, ggaReal=dirReal*ggaRate;
+ const costoObraPresup=dirPresup+c.gga, costoTotalReal=dirReal+ggaReal;
+ const ingreso=c.total-c.it, utilReal=ingreso-costoTotalReal;
+ return {tieneReal,cat,dirPresup,dirReal,ggaReal,costoObraPresup,costoTotalReal,ingreso,utilReal,desviacion:dirReal-dirPresup,desviacionUtil:utilReal-c.util};
+}
+
+function renderAnalisis(){
+ const rows=proyectos.map(p=>{const c=calcOf(p);return {p,c,a:realCalc(p,c)};});
+ const conReal=rows.filter(x=>x.a.tieneReal);
+ const sum=(f)=>conReal.reduce((s,x)=>s+f(x),0);
+ const dirPresupT=sum(x=>x.a.dirPresup), dirRealT=sum(x=>x.a.dirReal), utilPresupT=sum(x=>x.c.util), utilRealT=sum(x=>x.a.utilReal);
+ document.getElementById("analisis").innerHTML=`
+ <div class="note">Carga los costos reales (Mano de Obra, Materiales, Herramientas/Equipos) por Código de proyecto. Con eso ya se puede comparar Presupuestado vs Real. Nota: los Gastos Generales reales no se cargan aparte — se estiman aplicando la misma proporción (%) que en el presupuesto de cada proyecto sobre el costo directo real; si algún día registras GGA real por separado dímelo y lo cambio para que sea exacto. El ingreso de referencia es el Precio Total Facturado menos el IT. "MO" es Mano de Obra TOTAL (Base MO + Cargas Sociales + IVA MO), igual que en tu modelo.</div>
+ ${conReal.length?`<div class="cards">
+  <div class="card"><div class="l">Proyectos con datos reales</div><div class="v">${conReal.length}</div></div>
+  <div class="card"><div class="l">Costo directo presupuestado</div><div class="v">${fmt(dirPresupT)}</div></div>
+  <div class="card"><div class="l">Costo directo real</div><div class="v">${fmt(dirRealT)}</div></div>
+  <div class="card"><div class="l">Desviación de costo</div><div class="v" style="color:${dirRealT>dirPresupT?'var(--bad)':'var(--good)'}">${fmt(dirRealT-dirPresupT)}</div></div>
+  <div class="card"><div class="l">Utilidad presupuestada</div><div class="v">${fmt(utilPresupT)}</div></div>
+  <div class="card"><div class="l">Utilidad real estimada</div><div class="v" style="color:${utilRealT<utilPresupT?'var(--bad)':'var(--good)'}">${fmt(utilRealT)}</div></div>
+ </div>`:""}
+ <h2>Presupuestado vs Real por proyecto</h2>
+ <div class="tw"><table><thead><tr>
+ <th>Código</th><th>Proyecto</th><th>MO total real</th><th>Saldo MO</th><th>Materiales real</th><th>Saldo Mat.</th><th>Herram./Equipo real</th><th>Saldo Herr/Eq</th><th>Costo Directo Presup.</th><th>Costo Directo Real</th><th>Desviación</th><th>Utilidad Presup.</th><th>Utilidad Real</th><th>Estado</th>
+ </tr></thead><tbody>
+ ${rows.map(({p,c,a})=>`<tr>
+  <td>${p.codigo||"—"}</td><td>${p.nombre}</td>
+  <td><input data-r="moR" data-id="${p.id}" type="number" style="width:80px" value="${p.real.moR}"></td>
+  <td style="color:${a.cat.mo.saldo<0?'var(--bad)':'var(--good)'}">${a.tieneReal?fmt(a.cat.mo.saldo):"—"}</td>
+  <td><input data-r="matR" data-id="${p.id}" type="number" style="width:80px" value="${p.real.matR}"></td>
+  <td style="color:${a.cat.mat.saldo<0?'var(--bad)':'var(--good)'}">${a.tieneReal?fmt(a.cat.mat.saldo):"—"}</td>
+  <td><input data-r="herrR" data-id="${p.id}" type="number" style="width:80px" value="${p.real.herrR+p.real.eqR}" title="Herramientas + Equipos"></td>
+  <td style="color:${a.cat.herr.saldo<0?'var(--bad)':'var(--good)'}">${a.tieneReal?fmt(a.cat.herr.saldo):"—"}</td>
+  <td>${fmt(a.dirPresup)}</td><td>${fmt(a.dirReal)}</td>
+  <td style="color:${a.desviacion>0?'var(--bad)':'var(--good)'}">${a.tieneReal?fmt(a.desviacion):"—"}</td>
+  <td>${fmt(c.util)}</td>
+  <td style="color:${a.tieneReal&&a.utilReal<c.util?'var(--bad)':'var(--good)'}">${a.tieneReal?fmt(a.utilReal):"—"}</td>
+  <td><span class="pill p-${p.estado.split(" ")[0]}">${p.estado}</span></td>
+ </tr>`).join("")}
+ </tbody></table></div>`;
+ document.querySelectorAll("[data-r]").forEach(inp=>inp.onchange=()=>{
+  const p=proyectos.find(x=>x.id===inp.dataset.id);
+  if(inp.dataset.r==="herrR"){p.real.herrR=+inp.value||0;p.real.eqR=0;} else p.real[inp.dataset.r]=+inp.value||0;
+  saveState();render();
+ });
+}
+
+function resumenLista(list){
+ const r={n:list.length,act:0,total:0,cobrado:0,gestion:0,gestOf:0,oficina:0,costoObra:0,it:0,util:0,mo:{p:0,r:0},mat:{p:0,r:0},herr:{p:0,r:0}};
+ list.filter(p=>p.estado!=="PROPUESTA").forEach(p=>{const c=calcOf(p),a=realCalc(p,c);
+  r.act++;r.total+=c.total;r.cobrado+=p.cobrado;r.gestion+=c.gestion;r.gestOf+=c.gestOf;r.oficina+=c.oficina;r.costoObra+=a.costoObraPresup;r.it+=c.it;r.util+=c.util;
+  ["mo","mat","herr"].forEach(k=>{r[k].p+=a.cat[k].presup;r[k].r+=a.cat[k].real;});});
+ return r;
+}
+function catTableHTML(mo,mat,herr){
+ const row=(n,x)=>`<tr><td>${n}</td><td>${fmt(x.p)}</td><td>${fmt(x.r)}</td><td style="color:${x.p-x.r<0?'var(--bad)':'var(--good)'}">${fmt(x.p-x.r)}</td></tr>`;
+ return `<div class="tw"><table><thead><tr><th>Categoría</th><th>Presupuestado</th><th>Ejecutado (real)</th><th>Saldo disponible</th></tr></thead><tbody>${row("Mano de Obra (total)",mo)}${row("Materiales",mat)}${row("Herramientas/Equipos",herr)}</tbody></table></div>`;
+}
+function resumenHTML(enc,list,cid,privado){
+ const r=resumenLista(list);
+ return `<h3>${enc} — ${list.length} proyecto(s), ${r.act} activo(s)</h3>
+ <div class="cards">
+  <div class="card"><div class="l">Costo total de obra</div><div class="v">${fmt(r.costoObra)}</div></div>
+  <div class="card"><div class="l">Gastos de gestión</div><div class="v">${fmt(r.gestion)}</div></div>
+  ${privado?"":`<div class="card"><div class="l">Gestión oficina</div><div class="v">${fmt(r.gestOf)}</div></div>
+  <div class="card"><div class="l">Gastos oficina</div><div class="v">${fmt(r.oficina)}</div></div>`}
+  <div class="card"><div class="l">Presupuesto facturado</div><div class="v">${fmt(r.total)}</div></div>
+  <div class="card"><div class="l">Cobrado</div><div class="v">${fmt(r.cobrado)}</div></div>
+  <div class="card"><div class="l">Saldo por cobrar</div><div class="v">${fmt(r.total-r.cobrado)}</div></div>
+ </div>
+ ${catTableHTML(r.mo,r.mat,r.herr)}
+ <div class="tw chart-box" style="margin-top:8px"><canvas id="${cid}"></canvas></div>
+ <div class="tw" style="margin-top:8px"><table><thead><tr><th>Proyecto</th><th>Cliente</th><th>Estado</th><th>Tipo</th><th>Avance</th><th>Costo obra presup.</th><th>Costo directo real</th><th>Total facturado</th><th>Saldo cobro</th></tr></thead><tbody>
+ ${list.map(p=>{const c=calcOf(p),a=realCalc(p,c);return `<tr><td>${p.nombre}</td><td>${p.cliente}</td><td><span class="pill p-${p.estado.split(" ")[0]}">${p.estado}</span></td><td>${p.tipo}</td><td>${p.avance===""?"—":p.avance+"%"}</td><td>${fmt(a.costoObraPresup)}</td><td>${a.tieneReal?fmt(a.dirReal):"—"}</td><td>${fmt(c.total)}</td><td>${fmt(c.total-p.cobrado)}</td></tr>`;}).join("")}
+ </tbody></table></div>`;
+}
+function dibujarCatChart(cid,m,ma,h,titulo){
+ const el=document.getElementById(cid); if(!el||typeof Chart==="undefined")return null;
+ return new Chart(el,{type:"bar",data:{labels:["Mano de Obra","Materiales","Herram./Equipos"],datasets:[
+  {label:"Presupuestado",data:[m.p,ma.p,h.p],backgroundColor:"#0d6efd"},
+  {label:"Ejecutado (real)",data:[m.r,ma.r,h.r],backgroundColor:"#dc2626"}]},
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"},title:{display:!!titulo,text:titulo||""}},scales:{y:{beginAtZero:true}}}});
+}
+
+function renderGraficas(){
+ const rows=proyectos.map(p=>{const c=calcOf(p);return {p,c};});
+ const grupos={};proyectos.forEach(p=>{const e=p.encargado||"Sin asignar";(grupos[e]=grupos[e]||[]).push(p);});
+ const encs=Object.keys(grupos);
+ let sel=window._selEnc||"__all__"; if(sel!=="__all__"&&!grupos[sel])sel="__all__";
+ const selP=window._selProy||"__all__";
+ let mo=0,mat=0,herrEq=0,gga=0,util=0;
+ rows.filter(x=>x.p.estado!=="PROPUESTA").forEach(({p,c})=>{mo+=p.mo+c.cs+c.iva;mat+=p.mat;herrEq+=p.eq+c.herr;gga+=c.gga;util+=c.util;});
+ const cuerpo=sel==="__all__"?`<div class="tw chart-box"><canvas id="chartEncargado"></canvas></div>
+  <h3>Composición del costo y utilidad (proyectos activos)</h3><div class="tw chart-box sm"><canvas id="chartComposicion"></canvas></div>`:resumenHTML(sel,grupos[sel],"chartEncSel",true);
+ document.getElementById("graficas").innerHTML=`
+ <h2>Visión global</h2>
+ <div class="form-grid"><div><label>Encargado</label><select id="selEnc"><option value="__all__">Todos los encargados</option>${encs.map(e=>`<option ${e===sel?"selected":""}>${e}</option>`).join("")}</select></div></div>
+ ${cuerpo}
+ <h2>Análisis individual por proyecto</h2>
+ <div class="form-grid"><div><label>Proyecto</label><select id="selProyecto"><option value="__all__">TODOS los proyectos (consolidado)</option>${rows.map(({p})=>`<option value="${p.id}" ${p.id===selP?"selected":""}>${p.nombre} (${p.codigo||"s/c"})</option>`).join("")}</select></div></div>
+ <div class="tw chart-box"><canvas id="chartProyecto"></canvas></div>
+ <div id="indTabla" style="margin-top:8px"></div>
+ <div class="note">Real = lo cargado en Análisis Financiero. Sin datos reales, el ejecutado aparece en cero.</div>`;
+ if(typeof Chart==="undefined")document.getElementById("graficas").insertAdjacentHTML("beforeend",'<div class="note" style="color:var(--bad)">No se pudo cargar la librería de gráficos (sin conexión). Las tablas siguen disponibles.</div>');
+ document.getElementById("selEnc").onchange=e=>{window._selEnc=e.target.value;renderGraficas();};
+ if(sel==="__all__"){
+  if(typeof Chart!=="undefined"){
+   const rs=encs.map(e=>resumenLista(grupos[e]));
+   new Chart(document.getElementById("chartEncargado"),{type:"bar",data:{labels:encs,datasets:[
+    {label:"Presupuestado (MO+Mat+Herr/Eq)",data:rs.map(r=>r.mo.p+r.mat.p+r.herr.p),backgroundColor:"#0d6efd"},
+    {label:"Ejecutado (real)",data:rs.map(r=>r.mo.r+r.mat.r+r.herr.r),backgroundColor:"#dc2626"}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},scales:{y:{beginAtZero:true}}}});
+   new Chart(document.getElementById("chartComposicion"),{type:"doughnut",data:{labels:["Mano de Obra total","Materiales","Herramientas/Equipos","Gastos Generales","Utilidad"],
+    datasets:[{data:[mo,mat,herrEq,gga,util],backgroundColor:["#0d6efd","#16a34a","#f59e0b","#6b7280","#7c3aed"]}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}}}});
+  }
+ } else { const r=resumenLista(grupos[sel]); dibujarCatChart("chartEncSel",r.mo,r.mat,r.herr,"Presupuesto vs ejecutado — "+sel); }
+ function drawProyecto(id){
+  let m,ma,h,titulo;
+  if(id==="__all__"){const r=resumenLista(proyectos);m=r.mo;ma=r.mat;h=r.herr;titulo="Consolidado — todos los proyectos activos";}
+  else{const f=rows.find(x=>x.p.id===id);if(!f)return;const a=realCalc(f.p,f.c);
+   m={p:a.cat.mo.presup,r:a.cat.mo.real};ma={p:a.cat.mat.presup,r:a.cat.mat.real};h={p:a.cat.herr.presup,r:a.cat.herr.real};titulo=f.p.nombre;}
+  document.getElementById("indTabla").innerHTML=catTableHTML(m,ma,h);
+  if(window._chP){window._chP.destroy();window._chP=null;}
+  window._chP=dibujarCatChart("chartProyecto",m,ma,h,titulo);
+ }
+ drawProyecto(selP);
+ document.getElementById("selProyecto").onchange=e=>{window._selProy=e.target.value;drawProyecto(e.target.value);};
+}
+
+function renderEquipo(){
+ const grupos={};
+ proyectos.forEach(p=>{const enc=p.encargado||"Sin asignar";(grupos[enc]=grupos[enc]||[]).push(p);});
+ const keys=Object.keys(grupos);
+ document.getElementById("equipo").innerHTML=`<h2>Estado de proyectos por encargado</h2><div class="note">Para reasignar un proyecto cambia su Encargado en la pestaña Proyectos: todo se recalcula solo. Los proyectos en PROPUESTA no cuentan en los totales.</div>`+keys.map((k,i)=>resumenHTML(k,grupos[k],"ce_"+i)).join("");
+ keys.forEach((k,i)=>{const r=resumenLista(grupos[k]);dibujarCatChart("ce_"+i,r.mo,r.mat,r.herr,"Presupuesto vs ejecutado — "+k);});
+}
+
+function renderPanorama(){
+ const act=activos(proyectos);
+ const t={mo:0,mat:0,herr:0,gestion:0,gestOf:0,oficina:0,gga:0,util:0,cont:0,it:0,total:0,cobrado:0,moR:0,matR:0,herrR:0};
+ act.forEach(p=>{const c=calcOf(p),a=realCalc(p,c);
+  t.mo+=a.cat.mo.presup;t.mat+=a.cat.mat.presup;t.herr+=a.cat.herr.presup;t.gestion+=c.gestion;t.gestOf+=c.gestOf;t.oficina+=c.oficina;t.gga+=c.gga;t.util+=c.util;t.cont+=c.cont;t.it+=c.it;t.total+=c.total;t.cobrado+=p.cobrado;
+  t.moR+=a.cat.mo.real;t.matR+=a.cat.mat.real;t.herrR+=a.cat.herr.real;});
+ const R=REALEMP;
+ const dirP=t.mo+t.mat+t.herr, dirR=t.moR+t.matR+t.herrR;
+ const ggaR=R.gestion+R.gestOf+R.oficina;
+ const obraP=dirP+t.gga, obraR=dirR+ggaR;
+ const itUsado=R.it>0?R.it:t.it;
+ const utilR=dirR>0?(t.total-itUsado)-obraR:null;
+ const filas=[
+  ["Mano de Obra total (Base + Cargas + IVA)",t.mo,t.moR,null,"c"],
+  ["Materiales",t.mat,t.matR,null,"c"],
+  ["Herramientas y Equipos",t.herr,t.herrR,null,"c"],
+  ["COSTO DIRECTO",dirP,dirR,null,"cb"],
+  ["Gastos de Gestión",t.gestion,R.gestion,"gestion","c"],
+  ["Gastos Gestión Oficina",t.gestOf,R.gestOf,"gestOf","c"],
+  ["Gastos Oficina",t.oficina,R.oficina,"oficina","c"],
+  ["TOTAL GASTOS GENERALES",t.gga,ggaR,null,"cb"],
+  ["COSTO TOTAL DE OBRA",obraP,obraR,null,"cb"],
+  ["Impuesto IT",t.it,R.it,"it","c"],
+  ["Facturado vs Cobrado",t.total,t.cobrado,null,"i"],
+  ["UTILIDAD (Facturado − IT − Costo de obra)",t.util,utilR,null,"ib"]
+ ];
+ const col=(tipo,d)=>{const cost=tipo[0]==="c";return (cost?d>0.005:d<-0.005)?"var(--bad)":"var(--good)";};
+ const tabla=filas.map(([n,p,r,key,tipo])=>{
+  const b=tipo.endsWith("b");
+  const realCell=key?`<input data-re="${key}" type="number" style="width:110px;text-align:right" value="${r}">`:(r===null?"—":fmt(r));
+  const d=r===null?null:r-p;
+  return `<tr style="${b?'font-weight:700;background:rgba(127,127,127,.06)':''}"><td>${n}</td><td>${fmt(p)}</td><td>${realCell}</td><td style="color:${d===null?'inherit':col(tipo,d)}">${d===null?"—":fmt(d)}</td><td>${r===null||!p?"—":((r/p)*100).toFixed(1)+"%"}</td></tr>`;}).join("");
+ const casc=(u,c)=>{const imp=u-c,iue=imp*DIST.iue,neta=imp-iue;const o={u,c,imp,iue,neta};["reservaLegal","garantias","capex","bono","desarrollo","retencion","retiro"].forEach(k=>o[k]=neta*DIST[k]);return o;};
+ const cP=casc(t.util,t.cont), cR=utilR===null?null:casc(utilR,t.util>0?utilR*(t.cont/t.util):0);
+ const fr=[["Utilidad bruta","u"],["(-) Fondo de contingencia","c"],["Utilidad imponible IUE","imp"],["(-) IUE","iue"],["UTILIDAD NETA LÍQUIDA","neta"],
+  ["Reserva Legal","reservaLegal"],["Fondo garantías y caja","garantias"],["Fondo CAPEX","capex"],["Bono desempeño","bono"],["Desarrollo/Software","desarrollo"],["Retención capital de trabajo","retencion"],["Retiro neto del socio","retiro"]];
+ const fondos=fr.map(([n,k])=>{const b=["imp","neta"].includes(k);return `<tr style="${b?'font-weight:700;background:rgba(127,127,127,.06)':''}"><td>${n}</td><td>${fmt(cP[k])}</td><td>${cR?fmt(cR[k]):"—"}</td><td style="color:${cR?(cR[k]-cP[k]<-0.005?'var(--bad)':'var(--good)'):'inherit'}">${cR?fmt(cR[k]-cP[k]):"—"}</td></tr>`;}).join("");
+ document.getElementById("panorama").innerHTML=`
+ <h2>Panorama general de la empresa</h2>
+ <div class="note">Base: proyectos activos (sin PROPUESTA). Mano de Obra, Materiales y Herramientas/Equipos reales se suman desde lo que cargas por proyecto en Análisis Financiero. Gestión, Gestión Oficina, Oficina e IT reales se cargan aquí (a nivel empresa). Mientras falten datos reales, la utilidad real es solo una referencia máxima.</div>
+ <div class="cards">
+  <div class="card"><div class="l">Costo de obra presupuestado</div><div class="v">${fmt(obraP)}</div></div>
+  <div class="card"><div class="l">Costo de obra real</div><div class="v">${fmt(obraR)}</div></div>
+  <div class="card"><div class="l">Diferencia real − presup.</div><div class="v" style="color:${obraR-obraP>0?'var(--bad)':'var(--good)'}">${fmt(obraR-obraP)}</div></div>
+  <div class="card"><div class="l">Utilidad presupuestada</div><div class="v">${fmt(t.util)}</div></div>
+  <div class="card"><div class="l">Utilidad real</div><div class="v">${utilR===null?"—":fmt(utilR)}</div></div>
+  <div class="card"><div class="l">Saldo por cobrar</div><div class="v">${fmt(t.total-t.cobrado)}</div></div>
+ </div>
+ <div class="tw"><table><thead><tr><th>Concepto</th><th>Presupuestado</th><th>Real / gastado</th><th>Diferencia (Real − Presup.)</th><th>% ejecución</th></tr></thead><tbody>${tabla}</tbody></table></div>
+ <div class="tw chart-box" style="margin-top:12px"><canvas id="chartPan"></canvas></div>
+ <h2>Utilidades, fondos y distribuciones</h2>
+ <div class="tw"><table><thead><tr><th>Concepto</th><th>Con utilidad presupuestada</th><th>Con utilidad real</th><th>Diferencia</th></tr></thead><tbody>${fondos}</tbody></table></div>
+ <div class="note">Los porcentajes de IUE y distribución se editan en la pestaña Matriz de tasas.</div>`;
+ document.querySelectorAll("[data-re]").forEach(i=>i.onchange=()=>{REALEMP[i.dataset.re]=+i.value||0;saveState();render();});
+ if(typeof Chart!=="undefined"){
+  const L=["Mano de Obra","Materiales","Herr./Equipos","Gestión","Gest. Oficina","Oficina","Utilidad"];
+  new Chart(document.getElementById("chartPan"),{type:"bar",data:{labels:L,datasets:[
+   {label:"Presupuestado",data:[t.mo,t.mat,t.herr,t.gestion,t.gestOf,t.oficina,t.util],backgroundColor:"#0d6efd"},
+   {label:"Real",data:[t.moR,t.matR,t.herrR,R.gestion,R.gestOf,R.oficina,utilR||0],backgroundColor:"#dc2626"}]},
+   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"bottom"}},scales:{y:{beginAtZero:true}}}});
+ }
+}
+
+const CONCEPTOS=[["cs","Cargas Sociales","% sobre Subtotal Mano de Obra"],["iva","IVA Mano de Obra","% sobre (MO + Cargas Sociales)"],
+["herr","Herramientas","% sobre Total Mano de Obra"],["gga","Gastos Grales. y Adm.","% sobre (Materiales+MO+Equipo)"],
+["util","Utilidad","% sobre (Materiales+MO+Equipo)"],["cont","Contingencia","% sobre Utilidad"],["reinv","Reinversión","% sobre Utilidad"],
+["ejec","Utilidad de ejercicio","% sobre Utilidad"],["it","Impuestos IT","% acumulado sobre costo+utilidad"]];
+
+function renderMatriz(){
+ document.getElementById("matriz").innerHTML=`
+ <h2>Matriz de tasas por Tipo de Cliente</h2>
+ <div class="note">Editable. Los cambios se aplican en vivo solo a proyectos <b>NUEVOS</b> (los históricos no se tocan). Gestión 25% / Gestión Oficina 30% / Oficina 45% se reparten siempre igual sobre el GGA, para todos los tipos.</div>
+ <div class="tw"><table><thead><tr><th>Concepto</th>${TIPOS.map(t=>`<th>${t}</th>`).join("")}</tr></thead><tbody>
+ ${CONCEPTOS.map(([k,label])=>`<tr><td>${label}</td>${TIPOS.map(t=>`<td><input data-k="${k}" data-t="${t}" type="number" step="0.01" style="width:70px;text-align:right" value="${(MATRIZ[t][k]*100).toFixed(2)}"></td>`).join("")}</tr>`).join("")}
+ </tbody></table></div>
+ <h2>Parámetros de nivel empresa</h2>
+ <div class="form-grid">
+ ${Object.entries({iue:"IUE",reservaLegal:"Reserva Legal",garantias:"Fondo Garantías",capex:"Fondo CAPEX",bono:"Bono desempeño",desarrollo:"Desarrollo/Software",retencion:"Retención cap. trabajo",retiro:"Retiro socio"}).map(([k,l])=>
+ `<div><label>${l} (%)</label><input data-d="${k}" type="number" step="0.01" value="${(DIST[k]*100).toFixed(2)}"></div>`).join("")}
+ </div>`;
+ document.querySelectorAll("[data-k]").forEach(inp=>inp.onchange=()=>{
+  MATRIZ[inp.dataset.t][inp.dataset.k]=(+inp.value||0)/100;saveState();render();
+ });
+ document.querySelectorAll("[data-d]").forEach(inp=>inp.onchange=()=>{
+  DIST[inp.dataset.d]=(+inp.value||0)/100;saveState();render();
+ });
+}
+
+function renderFiscal(){
+ const list=activos(proyectos);
+ let it=0,util=0,cont=0; list.forEach(p=>{const c=calcOf(p);it+=c.it;util+=c.util;cont+=c.cont;});
+ const iue=(util-cont)*DIST.iue;
+ document.getElementById("fiscal").innerHTML=`
+ <h2>Estrategias contables legales para optimizar la carga tributaria (Bolivia)</h2>
+ <div class="hl"><b>Estado actual:</b> IT acumulado facturado ${fmt(it)} · IUE estimado del ejercicio ${fmt(iue)}. El IT es acreditable contra el IUE del mismo período — planifica el pago de IUE considerando ese crédito antes de desembolsar caja de más.</div>
+ <div class="strategy"><b>1. Compensación IT contra IUE (Ley 843, Art. 77)</b><p>El Impuesto a las Transacciones (3.09% recargo interno / 3% legal) pagado durante la gestión se acredita contra el IUE (25%) determinado al cierre. No pagues ambos por separado sin aplicar la compensación en el Formulario 500/605.</p></div>
+ <div class="strategy"><b>2. Depreciación de activos fijos (D.S. 24051)</b><p>Usa las tablas de vida útil mínima permitidas para equipos, herramientas y vehículos: acelera la deducción del gasto y reduce la utilidad imponible IUE de forma legal.</p></div>
+ <div class="strategy"><b>3. Previsión para incobrables</b><p>Hasta 2% anual de la cartera en mora es deducible del IUE si está documentada (facturas, requerimientos de pago). Revisa el "Saldo por Cobrar" del panel de Proyectos como base para esta previsión.</p></div>
+ <div class="strategy"><b>4. Crédito fiscal IVA (13%) sobre compras</b><p>Exige factura con NIT válido de cada proveedor de materiales/subcontratistas y regístrala dentro de los 180 días. Verifica el NIT en el padrón del SIN antes de pagar: una factura inválida pierde el crédito fiscal.</p></div>
+ <div class="strategy"><b>5. Timing de facturación por avance real de obra</b><p>Factura según el avance de obra efectivamente ejecutado (no anticipos completos). Esto difiere legalmente el IT y el IVA débito al período fiscal que corresponde, mejorando el flujo de caja.</p></div>
+ <div class="strategy"><b>6. Compensación de pérdidas de gestiones anteriores</b><p>Si alguna gestión cerró con pérdida, esta se puede arrastrar y compensar contra la utilidad imponible IUE de las siguientes gestiones (revisa el plazo vigente según RND del SIN).</p></div>
+ <div class="strategy"><b>7. Reserva Legal obligatoria (Código de Comercio)</b><p>5% anual de la utilidad hasta cubrir el 50% del capital social. No es un gasto deducible del IUE, pero sí reduce lo que se distribuye a los socios — planifícalo dentro de la cascada de utilidad, no como gasto operativo.</p></div>
+ <div class="strategy"><b>8. Cargas sociales y AFP al día</b><p>Los aportes patronales son gasto deducible solo si están pagados y declarados en plazo; los atrasos generan multas AFP que si no son deducibles y erosionan la utilidad neta real.</p></div>
+ <div class="strategy"><b>9. Clasificación correcta por Tipo de Cliente</b><p>Cada tipo (A, A-1, B, B-1, C, D) tiene distinta carga social e IVA MO aplicada — clasificar mal un proyecto puede sub-declarar o sobre-declarar impuestos. Usa siempre la Matriz de Tasas antes de presupuestar.</p></div>
+ <div class="strategy"><b>10. Provisión de caja para IUE/IT</b><p>Aparta mensualmente un % de la utilidad bruta (según la cascada del panel Resumen) en el "Fondo Respaldo Garantías y Caja", para pagar impuestos a tiempo y evitar mantenimiento de valor y multas por mora.</p></div>
+ <div class="note">Esta sección es orientativa y educativa; para presentarla o ejecutarla ante el SIN valida los montos y plazos vigentes con tu contador matriculado o abogado tributarista, ya que las normas y RND cambian.</div>
+ `;
+}
+
+function render(){
+ renderTabs();
+ document.querySelectorAll(".tab").forEach(s=>s.classList.remove("active"));
+ document.getElementById(activeTab).classList.add("active");
+ if(activeTab==="dashboard")renderDashboard();
+ if(activeTab==="proyectos")renderProyectos();
+ if(activeTab==="analisis")renderAnalisis();
+ if(activeTab==="graficas")renderGraficas();
+ if(activeTab==="equipo")renderEquipo();
+ if(activeTab==="panorama")renderPanorama();
+ if(activeTab==="matriz")renderMatriz();
+ if(activeTab==="fiscal")renderFiscal();
+}
+loadState();render();
+</script>
+</body>
+</html>
